@@ -205,3 +205,53 @@ export function isStaticMethod(node) {
     assignee.expression.data === node.parentNode.parentNode.name.data
   );
 }
+
+/**
+ * Determines whether this node will be a statement in JavaScript.
+ *
+ * @param {Object} node
+ * @returns {boolean}
+ */
+export function isStatement(node) {
+  return node._expression === false;
+}
+
+export function makeStatement(node) {
+  node._expression = false;
+}
+
+/**
+ * Determines whether this node will be an expression in JavaScript.
+ *
+ * @param {Object} node
+ * @returns {boolean}
+ */
+export function isExpression(node) {
+  return node._expression === true;
+}
+
+export function makeExpression(node) {
+  switch (node.type) {
+    case 'Conditional':
+      makeExpression(node.consequent);
+      if (node.alternate) {
+        makeExpression(node.alternate);
+      }
+      break;
+
+    case 'Block':
+      if (!node.inline) {
+        throw new Error(`cannot make non-inline Block an expression`);
+      }
+      makeExpression(node.statements[0]);
+      break;
+
+    case 'AssignOp':
+      break;
+
+    default:
+      throw new Error(`don't know how to make ${node.type} an expression`);
+  }
+
+  node._expression = true;
+}

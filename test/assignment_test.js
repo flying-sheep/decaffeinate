@@ -1,6 +1,6 @@
 import check from './support/check';
 
-describe('assignment', () => {
+describe.only('assignment', () => {
   it('turns soaked member access assignment into an `if` statement', () => {
     check(`
       canvasContext?.font = $('body').css('font')

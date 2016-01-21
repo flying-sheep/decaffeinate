@@ -107,6 +107,7 @@ export function patchConditionalEnd(node, patcher) {
   } else if (node.type === 'Conditional' && (!node.alternate || node.alternate.type !== 'Conditional')) {
     if (!isExpressionResultUsed(node)) {
       // Close the conditional if it isn't handled by closing an `else if`.
+      console.log(node.type, isOneLineConditionAndConsequent(node, patcher.original));
       if (isOneLineConditionAndConsequent(node, patcher.original)) {
         let nodeRange = trimmedNodeRange(node, patcher.original);
         patcher.insert(nodeRange[1], ' }');

@@ -4,7 +4,7 @@ import findCounterpartCharacter from './findCounterpartCharacter';
 import isExpressionResultUsed from './isExpressionResultUsed';
 import traverse from './traverse';
 import wantsToBeStatement from './wantsToBeStatement';
-import { isBinaryOperator, isConditional, isFunctionBody, isShorthandThisObjectMember } from './types';
+import { isBinaryOperator, isConditional, isExpression, isFunctionBody, isShorthandThisObjectMember, makeExpression, makeStatement } from './types';
 import { parse as coffeeScriptParse } from 'coffee-script-redux';
 
 /**
@@ -31,12 +31,47 @@ export default function parse(source) {
  * @private
  */
 function attachMetadata(node) {
+  const { parentNode } = node;
+  if (parentNode && parentNode.type === 'Block' && !isExpression(node)) {
+    makeStatement(node);
+  }
+
+  if (isConditional(node)) {
+    node.consequent = ensureBlock(node.consequent);
+    if (node.alternate) {
+      node.alternate = ensureBlock(node.alternate);
+    }
+  }
+
   if (isConditional(node) && isFunctionBody(node)) {
     // This conditional is a single-line function that wants to be a statement.
     node._expression = !wantsToBeStatement(node);
   } else if (isConditional(node) && isExpressionResultUsed(node)) {
     // This conditional is used in an expression context, e.g. `a(if b then c)`.
-    node._expression = true;
+    makeExpression(node);
+  }
+}
+
+/**
+ * If `node` is not a block, builds an inline block node with `node` as the only
+ * statement.
+ *
+ * @param {Object} node
+ * @returns {Object}
+ */
+function ensureBlock(node) {
+  if (node.type !== 'Block') {
+    return {
+      type: 'Block',
+      inline: true,
+      statements: [node],
+      range: node.range.slice(),
+      line: node.line,
+      column: node.column,
+      raw: node.raw
+    };
+  } else {
+    return node;
   }
 }
 
