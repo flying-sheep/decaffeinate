@@ -2,9 +2,9 @@ import Scope from './Scope';
 import buildLineAndColumnMap from './buildLineAndColumnMap';
 import findCounterpartCharacter from './findCounterpartCharacter';
 import isExpressionResultUsed from './isExpressionResultUsed';
-import traverse from './traverse';
+import traverse, { reduce } from './traverse';
 import wantsToBeStatement from './wantsToBeStatement';
-import { isBinaryOperator, isConditional, isFunctionBody, isShorthandThisObjectMember } from './types';
+import { isBinaryOperator, isConditional, isElseIf, isFunction, isFunctionBody, isShorthandThisObjectMember, lastStatementOfFunction } from './types';
 import { parse as coffeeScriptParse } from 'coffee-script-redux';
 
 /**
@@ -18,9 +18,27 @@ export default function parse(source) {
   const map = buildLineAndColumnMap(source);
 
   traverse(ast, node => {
-    attachMetadata(node, source);
     attachScope(node);
     fixRange(node, map, source);
+  });
+
+  traverse(ast, node => {
+    attachMetadata(node, source);
+  });
+
+  traverse(ast, {
+    enter(node) {
+      console.log('ENTER', node.type);
+    },
+
+    leave(node) {
+      switch (node.type) {
+        case 'Throw':
+        case 'Return':
+          node.parentNode._statement = true;
+
+      }
+    }
   });
 
   return ast;
@@ -40,12 +58,100 @@ function attachMetadata(node, source) {
     node.isUnless = true;
   }
 
+  markImplicitReturns(node);
+
   if (isConditional(node) && isFunctionBody(node)) {
     // This conditional is a single-line function that wants to be a statement.
     node._expression = !wantsToBeStatement(node);
   } else if (isConditional(node) && isExpressionResultUsed(node)) {
     // This conditional is used in an expression context, e.g. `a(if b then c)`.
     node._expression = true;
+  }
+}
+
+/**
+ * @param {Object} node
+ * @returns {boolean}
+ */
+function explicitlyReturns(node) {
+  let result = false;
+  traverse(node, child => {
+    if (result) {
+      // Already found a return, just bail.
+      return false;
+    } else if (isFunction(child)) {
+      // Don't look inside functions.
+      return false;
+    } else if (child.type === 'Return') {
+      result = true;
+      return false;
+    }
+  });
+  return result;
+}
+
+/**
+ * FIXME: Turn this into something that marks returns and expressions.
+ * Figure out what the implicitly-returned nodes are and mark them.
+ *
+ * @param {Object} node
+ */
+function markImplicitReturns(node) {
+  function mark(node) {
+    node._implicitReturn = true;
+  }
+
+  function markWithin(node) {
+    if (!node) {
+      return;
+    }
+
+    switch (node.type) {
+      case 'Block':
+        markWithin(node.statements[node.statements.length - 1]);
+        break;
+
+      case 'Conditional':
+        if (node.parentNode.type !== 'Block' && !isElseIf(node)) {
+          mark(node);
+        } else {
+          markWithin(node.consequent);
+          markWithin(node.alternate);
+        }
+        break;
+
+      case 'Switch':
+        node.cases.forEach(({ consequent }) => markWithin(consequent));
+        markWithin(node.alternate);
+        break;
+
+      case 'Return':
+      case 'Throw':
+        break;
+
+      case 'ForIn':
+      case 'ForOf':
+      case 'While':
+        if (!explicitlyReturns(node)) {
+          mark(node);
+        }
+        break;
+
+      default:
+        mark(node);
+    }
+  }
+
+  const { parentNode } = node;
+
+  if (parentNode && parentNode.type === 'Constructor') {
+    return;
+  }
+
+  if (node.type === 'Function') {
+    markWithin(node.body);
+  } else if (node.type === 'BoundFunction' && node.body && node.body.type === 'Block') {
+    markWithin(node.body);
   }
 }
 

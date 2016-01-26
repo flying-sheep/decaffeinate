@@ -10,6 +10,7 @@ export default function wantsToBeStatement(node) {
   }
 
   switch (node.type) {
+    case 'Return':
     case 'Throw':
       return true;
 

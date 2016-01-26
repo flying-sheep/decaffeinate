@@ -1,6 +1,6 @@
 import check from './support/check';
 
-describe('throw', () => {
+describe.only('throw', () => {
   it('is preserved when used in a statement context', () => {
     check(`throw new Error()`, `throw new Error();`);
   });

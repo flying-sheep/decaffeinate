@@ -7,7 +7,12 @@ import isImplicitlyReturned from '../utils/isImplicitlyReturned';
  * @param {MagicString} patcher
  */
 export default function patchReturns(node, patcher) {
-  if (isImplicitlyReturned(node)) {
+  const iir = isImplicitlyReturned(node);
+  if (!!node._implicitReturn ^ iir) {
+    console.log(node);
+    throw new Error('DISAGREEMENT');
+  }
+  if (iir) {
     patcher.insert(node.range[0], 'return ');
   }
 }

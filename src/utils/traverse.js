@@ -3,10 +3,21 @@
  * source order.
  *
  * @param {Object} node
- * @param {function(Object, function(Object), boolean): ?boolean} callback
+ * @param {{ enter: Function, leave: Function }|function(Object, function(Object), boolean): ?boolean} callbacks
  */
-export default function traverse(node, callback) {
-  var descended = false;
+export default function traverse(node, callbacks) {
+  let descended = false;
+  let enter;
+  let leave;
+
+  if (typeof callbacks === 'function') {
+    enter = callbacks;
+    leave = () => {};
+  } else {
+    enter = callbacks.enter || (() => {});
+    leave = callbacks.leave || (() => {});
+  }
+  callbacks = { enter, leave };
 
   function descend(parent) {
     descended = true;
@@ -16,16 +27,18 @@ export default function traverse(node, callback) {
       if (Array.isArray(value)) {
         value.forEach(child => {
           child.parentNode = parent;
-          traverse(child, callback);
+          traverse(child, callbacks);
         });
       } else if (value) {
         value.parentNode = parent;
-        traverse(value, callback);
+        traverse(value, callbacks);
       }
     });
+
+    leave(node);
   }
 
-  const shouldDescend = callback(
+  const shouldDescend = enter(
     node,
     descend,
     childPropertyNames(node).length === 0
@@ -34,6 +47,18 @@ export default function traverse(node, callback) {
   if (!descended && shouldDescend !== false) {
     descend(node);
   }
+}
+
+export function reduce(node, state, callbacks) {
+  traverse(node, {
+    leave(node) {
+      const reducer = `reduce${node.type}`;
+      if (callbacks[reducer]) {
+        state = callbacks[reducer](node, state);
+      }
+    }
+  });
+  return state;
 }
 
 const ORDER = {

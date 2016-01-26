@@ -205,3 +205,35 @@ export function isStaticMethod(node) {
     assignee.expression.data === node.parentNode.parentNode.name.data
   );
 }
+
+export function lastStatementOfFunction(node) {
+  if (!isFunction(node)) {
+    return null;
+  }
+
+  const { body } = node;
+
+  if (!body) {
+    return null;
+  }
+
+  if (body.type !== 'Block') {
+    return body;
+  }
+
+  return body.statements[body.statements.length - 1];
+}
+
+export function isElseIf(node) {
+  if (!isConditional(node)) {
+    return false;
+  }
+
+  const { parentNode } = node;
+
+  if (!isConditional(parentNode)) {
+    return false;
+  }
+
+  return node === parentNode.alternate;
+}

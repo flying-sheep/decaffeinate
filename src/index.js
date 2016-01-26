@@ -27,6 +27,7 @@ import preprocessIn from './preprocessors/preprocessIn';
 import preprocessNegatableOps from './preprocessors/preprocessNegatableOps';
 import preprocessParameters from './preprocessors/preprocessParameters';
 import preprocessRange from './preprocessors/preprocessRange';
+import preprocessReturn from './preprocessors/preprocessReturn';
 import preprocessSoakedMemberAccessOp from './preprocessors/preprocessSoakedMemberAccessOp';
 import preprocessSoakedFunctionApplication from './preprocessors/preprocessSoakedFunctionApplication';
 import preprocessSwitch from './preprocessors/preprocessSwitch';
@@ -77,6 +78,7 @@ export function convert(source) {
       preprocessBinaryExistentialOperator(node, patcher) ||
       preprocessParameters(node, patcher) ||
       preprocessRange(node, patcher) ||
+      preprocessReturn(node, patcher) ||
       preprocessSwitch(node, patcher) ||
       preprocessSoakedFunctionApplication(node, patcher) ||
       preprocessSoakedMemberAccessOp(node, patcher) ||
@@ -86,6 +88,7 @@ export function convert(source) {
   });
 
   if (wasRewritten) {
+    console.log(patcher.toString());
     return convert(patcher.toString());
   }
 
