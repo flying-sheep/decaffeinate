@@ -1,6 +1,6 @@
 import check from './support/check';
 
-describe('assignment', () => {
+describe.only('assignment', () => {
   it('turns soaked member access assignment into an `if` statement', () => {
     check(`
       canvasContext?.font = $('body').css('font')
@@ -23,7 +23,7 @@ describe('assignment', () => {
       a ?= 2
     `, `
       var a = 1;
-      if (a == null) { a = 2; }
+      if (!(typeof a !== "undefined" && a !== null)) { a = 2; }
     `);
   });
 
@@ -31,7 +31,7 @@ describe('assignment', () => {
     check(`
       a.b ?= 1
     `, `
-      if (a.b == null) { a.b = 1; }
+      if (!(a.b != null)) { a.b = 1; }
     `);
   });
 
@@ -39,7 +39,7 @@ describe('assignment', () => {
     check(`
       a[b] ?= 1
     `, `
-      if (a[b] == null) { a[b] = 1; }
+      if (!(a[b] != null)) { a[b] = 1; }
     `);
   });
 
@@ -48,7 +48,7 @@ describe('assignment', () => {
       a[b()] ?= 1
     `, `
       var name;
-      if (a[name = b()] == null) { a[name] = 1; }
+      if (!(a[name = b()] != null)) { a[name] = 1; }
     `);
   });
 
@@ -57,7 +57,7 @@ describe('assignment', () => {
       a()[b] ?= 1
     `, `
       var base;
-      if ((base = a())[b] == null) { base[b] = 1; }
+      if (!((base = a())[b] != null)) { base[b] = 1; }
     `);
   });
 
@@ -67,7 +67,7 @@ describe('assignment', () => {
     `, `
       var base;
       var name;
-      if ((base = a())[name = b()] == null) { base[name] = 1; }
+      if (!((base = a())[name = b()] != null)) { base[name] = 1; }
     `);
   });
 
@@ -77,7 +77,7 @@ describe('assignment', () => {
     `, `
       var base;
       var name;
-      a((base = b())[name = c()] == null ? base[name] = 1 : base[name]);
+      a(((base = b())[name = c()] != null) ? base[name] : base[name] = 1);
     `);
   });
 });
